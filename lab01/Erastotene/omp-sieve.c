@@ -166,13 +166,22 @@ long mark( char *isprime, int k, long from, long to )
 {
     long nmarked = 0l;
     /* [TODO] Parallelize this function */
-    from = ((from + k - 1)/k)*k; /* start from the lowest multiple of p that is >= from */
-    for ( long x=from; x<to; x+=k ) {
+#pragma omp parallel default(none) shared(from, to, k, isprime) reduction(+:nmarked)
+{
+    int id = omp_get_thread_num();
+    int p = omp_get_num_threads();
+
+    int n = to - from;
+    int my_from = from + (n * id) / p;
+    my_from = ((my_from + k - 1)/k)*k; /* start from the lowest multiple of p that is >= from */
+    int my_to = from + (n * (id + 1)) / p;
+    for ( long x=my_from; x<my_to; x+=k ) {
         if (isprime[x]) {
             isprime[x] = 0;
             nmarked++;
         }
     }
+}
     return nmarked;
 }
 

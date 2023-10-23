@@ -139,15 +139,16 @@ int make_hist(const char *text, int hist[ALPHA_SIZE])
     int nlet = 0; /* total number of alphabetic characters processed */
     int i, j;
     /* [TODO] Parallelize this function */
-
+#pragma omp parallel for
     /* Reset the histogram */
     for (j = 0; j < ALPHA_SIZE; j++)
     {
         hist[j] = 0;
     }
-
+    int TEXT_LEN = strlen(text);
+#pragma omp parallel for default(none) private(i) shared(text, TEXT_LEN) reduction(+:hist[:ALPHA_SIZE]) reduction(+:nlet)
     /* Count occurrences */
-    for (i = 0; i < strlen(text); i++)
+    for (i = 0; i < TEXT_LEN; i++)
     {
         const char c = text[i];
         if (isalpha(c))
@@ -156,7 +157,6 @@ int make_hist(const char *text, int hist[ALPHA_SIZE])
             hist[tolower(c) - 'a']++;
         }
     }
-
     return nlet;
 }
 
