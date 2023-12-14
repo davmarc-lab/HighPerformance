@@ -30,6 +30,12 @@ movie: $(EXE).movie
 	for f in *.gp; do echo "Processing $$f"; gnuplot "$$f"; done
 	ffmpeg -y -i "circles-%05d.png" -vcodec mpeg4 circles.avi
 
+MP: $(EXE).omp
+
+$(EXE).omp: CFLAGS+= -fopenmp
+$(EXE).omp: $(EXE).omp.c
+	$(CC) $(CFLAGS) $< -o $@ $(LDLIBS)
+
 clean:
-	\rm -f $(EXE) $(EXE).movie *.o *~ *.gp *.png *.avi
+	\rm -f $(EXE) $(EXE).omp $(EXE).movie *.o *~ *.gp *.png *.avi
 
