@@ -64,6 +64,8 @@ and then assembled to produce the movie `circles.avi`:
 #include <assert.h>
 #include <math.h>
 
+#define CHUNK_SIZE 32
+
 typedef struct {
     float x, y;   /* coordinates of center */
     float r;      /* radius */
@@ -116,6 +118,7 @@ void init_circles(int n)
  */
 void reset_displacements( void )
 {
+#pragma omp parallel for default(none) shared(ncircles, circles)
     for (int i=0; i<ncircles; i++) {
         circles[i].dx = circles[i].dy = 0.0;
     }
@@ -129,8 +132,8 @@ void reset_displacements( void )
 int compute_forces( void )
 {
     int n_intersections = 0;
+#pragma omp parallel for default(none) shared(circles, ncircles, K, EPSILON) reduction(+: n_intersections) schedule(dynamic, CHUNK_SIZE)
     for (int i=0; i<ncircles; i++) {
-#pragma omp parallel for
         for (int j=i+1; j<ncircles; j++) {
             const float deltax = circles[j].x - circles[i].x;
             const float deltay = circles[j].y - circles[i].y;
@@ -163,6 +166,7 @@ int compute_forces( void )
  */
 void move_circles( void )
 {
+#pragma omp parallel for default(none) shared(ncircles, circles)
     for (int i=0; i<ncircles; i++) {
         circles[i].x += circles[i].dx;
         circles[i].y += circles[i].dy;
