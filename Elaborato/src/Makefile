@@ -44,6 +44,7 @@ omp-$(EXE): omp-$(EXE).c
 
 CUDA: cuda-$(EXE)
 
+cuda-$(EXE): CFLAGS=
 cuda-$(EXE): cuda-$(EXE).cu
 	nvcc $(CFLAGS) $< -o $@ $(LDLIBS)
 
