@@ -14,7 +14,8 @@ fi
 
 if [[ $# -eq 2 ]] ; then
     FILE="openmp.txt"
-    EXEC="circles.omp"
+    EXEC="$1"
+    echo $EXEC
     NUM=$2
 fi
 if [[ ! -e $FILE ]] ; then 

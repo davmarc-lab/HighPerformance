@@ -30,12 +30,24 @@ movie: $(EXE).movie
 	for f in *.gp; do echo "Processing $$f"; gnuplot "$$f"; done
 	ffmpeg -y -i "circles-%05d.png" -vcodec mpeg4 circles.avi
 
-MP: $(EXE).omp
+# - make MP
+#   to compile the openmp version.
 
-$(EXE).omp: CFLAGS+= -fopenmp
-$(EXE).omp: $(EXE).omp.c
+MP: omp-$(EXE)
+
+omp-$(EXE): CFLAGS+= -fopenmp
+omp-$(EXE): omp-$(EXE).c
 	$(CC) $(CFLAGS) $< -o $@ $(LDLIBS)
 
+# - make CUDA
+#   to compile the cuda version.
+
+CUDA: cuda-$(EXE)
+
+cuda-$(EXE): cuda-$(EXE).cu
+	nvcc $(CFLAGS) $< -o $@ $(LDLIBS)
+
+
 clean:
-	\rm -f $(EXE) $(EXE).omp $(EXE).movie *.o *~ *.gp *.png *.avi
+	rm -f $(EXE) omp-$(EXE) cuda-$(EXE) $(EXE).movie *.o *~ *.gp *.png *.avi
 
