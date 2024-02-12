@@ -64,6 +64,12 @@ and then assembled to produce the movie `circles.avi`:
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <iostream>
+
+using namespace std;
+
+#define BLOCKDIM 1024
+
 typedef struct {
     float x, y;   /* coordinates of center */
     float r;      /* radius */
@@ -107,15 +113,39 @@ void init_circles(int n) {
     }
 }
 
+__global__ void device_reset_displacements(const int *n, circle_t *d_circles) {
+    int index = threadIdx.x + blockIdx.x * blockDim.x;
+    d_circles[index].dx = d_circles[index].dy = 0.0;
+}
+
 /**
  * Set all displacements to zero.
  */
+
 void reset_displacements(void) {
-    for (int i = 0; i < ncircles; i++) {
+    int *d_ncircles;
+    circle_t *d_circles;
+
+    const size_t SIZE_NCIRCLES = sizeof(int *);
+    const size_t SIZE_CIRCLES = sizeof(circle_t) * ncircles;
+
+    cudaSafeCall(cudaMalloc((void **)&d_ncircles, SIZE_NCIRCLES));
+    cudaSafeCall(cudaMalloc((void **)&d_circles, SIZE_CIRCLES));
+
+    cudaSafeCall(cudaMemcpy(d_ncircles, &ncircles, SIZE_NCIRCLES, cudaMemcpyHostToDevice));
+    cudaSafeCall(cudaMemcpy(d_circles, circles, SIZE_CIRCLES, cudaMemcpyHostToDevice));
+
+    device_reset_displacements<<<(ncircles + BLOCKDIM - 1) / BLOCKDIM, BLOCKDIM>>>(d_ncircles, d_circles);
+
+    cudaSafeCall(cudaMemcpy(circles, d_circles, SIZE_CIRCLES, cudaMemcpyDeviceToHost));
+}
+
+void serial_reset_displacements( void )
+{
+    for (int i=0; i<ncircles; i++) {
         circles[i].dx = circles[i].dy = 0.0;
     }
 }
-
 /**
  * Compute the force acting on each circle; returns the number of
  * overlapping pairs of circles (each overlapping pair must be counted
