@@ -18,6 +18,7 @@ if [[ $# -eq 2 ]] ; then
     echo $EXEC
     NUM=$2
 fi
+
 if [[ ! -e $FILE ]] ; then 
     touch $FILE  
 fi

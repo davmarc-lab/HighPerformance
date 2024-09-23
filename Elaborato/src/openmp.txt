@@ -1,4 +1,200 @@
-Elapsed time: 1.112123 s
+Elapsed time: 2.344617 s
 
-Elapsed time: 1.125057 s
+Elapsed time: 2.406830 s
+
+Elapsed time: 2.302957 s
+
+Elapsed time: 2.352426 s
+
+Elapsed time: 2.447860 s
+
+Elapsed time: 2.390430 s
+
+Elapsed time: 2.383019 s
+
+Elapsed time: 2.386184 s
+
+Elapsed time: 2.398624 s
+
+Elapsed time: 2.396649 s
+
+Elapsed time: 2.584930 s
+
+Elapsed time: 2.563293 s
+
+Elapsed time: 2.397143 s
+
+Elapsed time: 2.412522 s
+
+Elapsed time: 2.400256 s
+
+Elapsed time: 2.396947 s
+
+Elapsed time: 2.395695 s
+
+Elapsed time: 2.391717 s
+
+Elapsed time: 2.390881 s
+
+Elapsed time: 2.391407 s
+
+Elapsed time: 2.396401 s
+
+Elapsed time: 2.393937 s
+
+Elapsed time: 2.392626 s
+
+Elapsed time: 2.387791 s
+
+Elapsed time: 2.739343 s
+
+Elapsed time: 2.403019 s
+
+Elapsed time: 2.397777 s
+
+Elapsed time: 2.417642 s
+
+Elapsed time: 2.390779 s
+
+Elapsed time: 2.389421 s
+
+Elapsed time: 2.392146 s
+
+Elapsed time: 2.392004 s
+
+Elapsed time: 2.387246 s
+
+Elapsed time: 2.391355 s
+
+Elapsed time: 2.388692 s
+
+Elapsed time: 2.388812 s
+
+Elapsed time: 2.391432 s
+
+Elapsed time: 2.573931 s
+
+Elapsed time: 2.557655 s
+
+Elapsed time: 2.392033 s
+
+Elapsed time: 2.416785 s
+
+Elapsed time: 2.388520 s
+
+Elapsed time: 2.390684 s
+
+Elapsed time: 2.390059 s
+
+Elapsed time: 2.407198 s
+
+Elapsed time: 2.392576 s
+
+Elapsed time: 2.390172 s
+
+Elapsed time: 2.387583 s
+
+Elapsed time: 2.407405 s
+
+Elapsed time: 2.384706 s
+
+Elapsed time: 2.399831 s
+
+Elapsed time: 2.690077 s
+
+Elapsed time: 2.409422 s
+
+Elapsed time: 2.428194 s
+
+Elapsed time: 2.387763 s
+
+Elapsed time: 2.387422 s
+
+Elapsed time: 2.385741 s
+
+Elapsed time: 2.388645 s
+
+Elapsed time: 2.389503 s
+
+Elapsed time: 2.384239 s
+
+Elapsed time: 2.385290 s
+
+Elapsed time: 2.386429 s
+
+Elapsed time: 2.387048 s
+
+Elapsed time: 2.392078 s
+
+Elapsed time: 2.531115 s
+
+Elapsed time: 2.559229 s
+
+Elapsed time: 2.399466 s
+
+Elapsed time: 2.403371 s
+
+Elapsed time: 2.387485 s
+
+Elapsed time: 2.391842 s
+
+Elapsed time: 2.389335 s
+
+Elapsed time: 2.448590 s
+
+Elapsed time: 2.431713 s
+
+Elapsed time: 2.578570 s
+
+Elapsed time: 2.639330 s
+
+Elapsed time: 2.387071 s
+
+Elapsed time: 2.380156 s
+
+Elapsed time: 2.495787 s
+
+Elapsed time: 2.571362 s
+
+Elapsed time: 2.388943 s
+
+Elapsed time: 2.448846 s
+
+Elapsed time: 2.386072 s
+
+Elapsed time: 2.385375 s
+
+Elapsed time: 2.384871 s
+
+Elapsed time: 2.383929 s
+
+Elapsed time: 2.390405 s
+
+Elapsed time: 2.460771 s
+
+Elapsed time: 2.402577 s
+
+Elapsed time: 2.383122 s
+
+Elapsed time: 2.382848 s
+
+Elapsed time: 2.419043 s
+
+Elapsed time: 2.684387 s
+
+Elapsed time: 2.449537 s
+
+Elapsed time: 2.427745 s
+
+Elapsed time: 2.388807 s
+
+Elapsed time: 2.386593 s
+
+Elapsed time: 2.390466 s
+
+Elapsed time: 2.382082 s
+
+Elapsed time: 2.438204 s
+
+Elapsed time: 2.381455 s
 
