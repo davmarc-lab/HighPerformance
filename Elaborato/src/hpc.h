@@ -2,31 +2,38 @@
  *
  * hpc.h - Miscellaneous utility functions for the HPC course
  *
- * Copyright (C) 2017 by Moreno Marzolla <moreno.marzolla(at)unibo.it>
- * Last modified on 2020-05-23 by Moreno Marzolla
+ * Copyright (C) 2017 by Moreno Marzolla <https://www.moreno.marzolla.name/>
+ * Last modified on 2024-11-29 by Moreno Marzolla
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * --------------------------------------------------------------------------
  *
- * This header file provides a function double hpc_gettime() that
+ * This header file provides a function `double hpc_gettime()` that
  * returns the elapsed time (in seconds) since "the epoch". The
  * function uses the timing routing of the underlying parallel
  * framework (OpenMP or MPI), if enabled; otherwise, the default is to
- * use the clock_gettime() function.
+ * use the `clock_gettime()` function.
  *
- * IMPORTANT NOTE: to work reliably this header file must be the FIRST
- * header file that appears in your code.
+ * IMPORTANT NOTE: `clock_gettime()` is a POSIX extension; therefore,
+ * when compiling with gcc, you MUST add
+ *
+ * #if _XOPEN_SOURCE < 600
+ * #define _XOPEN_SOURCE 600
+ * #endif
+ *
+ * at the beginning of your program, BEFORE any other include.
  *
  ****************************************************************************/
 
@@ -57,7 +64,7 @@ double hpc_gettime( void )
  * POSIX-based timing routines
  ******************************************************************************/
 #if _XOPEN_SOURCE < 600
-#define _XOPEN_SOURCE 600
+#error You must add "#define _XOPEN_SOURCE 600" at the very beginning of your source program
 #endif
 #include <time.h>
 
@@ -65,7 +72,7 @@ double hpc_gettime( void )
 {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts );
-    return ts.tv_sec + (double)ts.tv_nsec / 1e9;
+    return ts.tv_sec + ((double)ts.tv_nsec) / 1.0e9;
 }
 #endif
 

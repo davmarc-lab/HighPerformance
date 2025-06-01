@@ -1,4 +1,15 @@
 # gitignore for c project
 
+dataset
+*.in
+out.txt
+
 *.o
 *.exe
+
+# report
+*.log
+*.odt
+*.aux
+*.fdb_latexmk
+*.fls
