@@ -47,7 +47,7 @@ ALL: $(EXE)
 	$(NVCC) $(NVCFLAGS) $< -o $@ $(NVLDLIBS)
 
 $(EXE_OMP): CFLAGS+=-fopenmp
-openmp: $(EXE_OMP)
+omp: $(EXE_OMP)
 
 $(EXE_MPI): CC=mpicc
 mpi: $(EXE_MPI)
