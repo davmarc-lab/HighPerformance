@@ -136,11 +136,12 @@ int skyline( const points_t *points, int *s )
     for (int i=0; i<N; i++) {
         s[i] = 1;
     }
-
+    #pragma omp parallel for default(shared) firstprivate(s) reduction(-:r)
     for (int i=0; i<N; i++) {
         if ( s[i] ) {
-            #pragma omp parallel for default(shared) firstprivate(s) reduction(-:r)
-            for (int j=0; j<N; j++) {
+            // not the best one with big N
+            for (int j=0; j < N; j++)
+            {
                 if ( s[j] && dominates( &(P[i*D]), &(P[j*D]), D ) ) {
                     s[j] = 0;
                     r--;
@@ -148,6 +149,7 @@ int skyline( const points_t *points, int *s )
             }
         }
     }
+
     return r;
 }
 
@@ -193,9 +195,14 @@ int main( int argc, char* argv[] )
     print_skyline(&points, s, r);
 
     fprintf(stderr, "\n\t%d points\n", points.N);
+#ifdef OPT
+    fprintf(stderr, "\t%d dimensionsAAAAA\n", points.D);
+#else
     fprintf(stderr, "\t%d dimensions\n", points.D);
+#endif
     fprintf(stderr, "\t%d points in skyline\n\n", r);
     fprintf(stderr, "Execution time (s) %f\n", elapsed);
+    printf("%f s\n", elapsed);
 
     free_points(&points);
     free(s);

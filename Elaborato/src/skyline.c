@@ -130,6 +130,7 @@ int skyline( const points_t *points, int *s )
     const int D = points->D;
     const int N = points->N;
     const float *P = points->P;
+    int sum = 0;
     int r = N;
 
     for (int i=0; i<N; i++) {
@@ -142,10 +143,12 @@ int skyline( const points_t *points, int *s )
                 if ( s[j] && dominates( &(P[i*D]), &(P[j*D]), D ) ) {
                     s[j] = 0;
                     r--;
+                    sum++;
                 }
             }
         }
     }
+    fprintf(stderr, "Its: %d\n", sum);
     return r;
 }
 

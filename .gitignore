@@ -1,8 +1,9 @@
 # gitignore for c project
 
-dataset
+dataset*
 *.in
-out.txt
+omp-out*
+out*
 
 *.o
 *.exe
