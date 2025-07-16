@@ -4,6 +4,7 @@ dataset*
 *.in
 omp-out*
 out*
+omp-*.txt
 
 *.o
 *.exe
