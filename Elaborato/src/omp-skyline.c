@@ -201,10 +201,10 @@ int main( int argc, char* argv[] )
     const double elapsed = hpc_gettime() - tstart;
     print_skyline(&points, s, r);
 
-    fprintf(stderr, "\n\t%d points\n", points.N);
-    fprintf(stderr, "\t%d dimensions\n", points.D);
-    fprintf(stderr, "\t%d points in skyline\n\n", r);
-    fprintf(stderr, "Execution time (s) %f\n", elapsed);
+    // fprintf(stderr, "\n\t%d points\n", points.N);
+    // fprintf(stderr, "\t%d dimensions\n", points.D);
+    // fprintf(stderr, "\t%d points in skyline\n\n", r);
+    // fprintf(stderr, "Execution time (s) %f\n", elapsed);
     printf("%f s\n", elapsed);
 
     free_points(&points);

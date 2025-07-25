@@ -5,6 +5,8 @@ dataset*
 omp-out*
 out*
 omp-*.txt
+sse*
+wse*
 
 *.o
 *.exe
