@@ -1,0 +1,27 @@
+# .clang-format for C, C++, and CUDA
+BasedOnStyle: LLVM
+
+# Indentation settings
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+
+# Brace and block style
+BreakBeforeBraces: Allman
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+
+# Formatting preferences
+ColumnLimit: 100
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+SortIncludes: true
+IncludeBlocks: Preserve
+SpaceBeforeParens: ControlStatements
+
+# Pointer alignment (common in C/CUDA)
+DerivePointerAlignment: false
+PointerAlignment: Right
+

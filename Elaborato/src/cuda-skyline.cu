@@ -1,37 +1,8 @@
-/****************************************************************************
- *
- * skyline.c - Serial implementaiton of the skyline operator
- *
- * Copyright (C) 2024 Moreno Marzolla
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * --------------------------------------------------------------------------
- *
- * Questo programma calcola lo skyline di un insieme di punti in D
- * dimensioni letti da standard input. Per una descrizione completa
- * si veda la specifica del progetto sulla piattaforma "Virtuale".
- *
- * Per compilare:
- *
- *      gcc -std=c99 -Wall -Wpedantic -O2 skyline.c -o skyline
- *
- * Per eseguire il programma:
- *
- *      ./skyline < input > output
- *
- ****************************************************************************/
+#include <cstddef>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "hpc.h"
 
 #if _XOPEN_SOURCE < 600
 #define _XOPEN_SOURCE 600
