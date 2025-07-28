@@ -1,9 +1,5 @@
 #include <cstddef>
-#include <stdio.h>
-#include <stdlib.h>
-
-#include "hpc.h"
-
+#include <cstdio>
 #if _XOPEN_SOURCE < 600
 #define _XOPEN_SOURCE 600
 #endif
@@ -13,6 +9,9 @@
 #include <stdlib.h>
 
 #include "hpc.h"
+
+#define BLOCKDIM 1024
+#define SHARED_POINT_DIM 1024
 
 typedef struct
 {
@@ -80,7 +79,7 @@ void free_points(points_t *points)
 }
 
 /* Returns 1 if |p| dominates |q| */
-int dominates(const float *p, const float *q, int D)
+__host__ __device__ int dominates(const float *p, const float *q, int D)
 {
     /* The following loops could be merged, but the keep them separated
        for the sake of readability */
@@ -166,9 +165,76 @@ void print_skyline(const points_t *points, const int *s, int r)
     }
 }
 
+__device__ int d_N;
+__device__ int d_D;
+__device__ int d_r;
+__device__ int d_its;
+
+__global__ void ker_skyline(float *p, int *s)
+{
+    // d_r = d_N;
+    __shared__ float point[SHARED_POINT_DIM];
+    if (d_D > SHARED_POINT_DIM)
+        return;
+
+    int index = blockIdx.x;
+    if (index > d_N)
+    {
+        return;
+    }
+
+    printf("%d\n", index);
+
+    for (int i = 0; i < d_D; i++)
+    {
+        point[i] = p[index * d_D + i];
+    }
+
+    if (s[index])
+    {
+        for (int i = 0; i < d_N; i++)
+        {
+            if (s[i] && dominates(point, &(p[i * d_D]), d_D))
+            {
+                s[i] = 0;
+                d_its++;
+            }
+        }
+    }
+
+    // for (int i = 0; i < d_N; i++)
+    // {
+    //     if (s[i])
+    //     {
+    //         for (int j = 0; j < d_N; j++)
+    //         {
+    //             if (s[j] && dominates(&(p[i * d_D]), &(p[j * d_D]), d_D))
+    //             {
+    //                 s[j] = 0;
+    //                 d_r--;
+    //                 d_its++;
+    //             }
+    //         }
+    //     }
+    // }
+}
+
+__global__ void ker_init(int *s)
+{
+    int index = threadIdx.x + blockIdx.x * blockDim.x;
+    if (index < d_N)
+    {
+        s[index] = 1;
+    }
+}
+
 int main(int argc, char *argv[])
 {
     points_t points;
+    int its = 0;
+
+    float *d_points;
+    int *d_s;
 
     if (argc != 1)
     {
@@ -179,15 +245,57 @@ int main(int argc, char *argv[])
     read_input(&points);
     int *s = (int *)malloc(points.N * sizeof(*s));
     assert(s);
+
+    const size_t size_points = points.D * points.N * sizeof(float);
+    cudaMalloc((void **)&d_points, size_points);
+    fprintf(stderr, "Points memory allocated: %zu\n", size_points);
+
+    const size_t size_s = points.N * sizeof(int);
+    cudaMalloc((void **)&d_s, size_s);
+    fprintf(stderr, "s array memory allocated: %zu\n", size_s);
+
+    // copy points to GPU memory
+    cudaMemcpy(d_points, points.P, size_points, cudaMemcpyHostToDevice);
+    fprintf(stderr, "Points copied\n");
+    cudaMemcpy(d_s, s, size_s, cudaMemcpyHostToDevice);
+    fprintf(stderr, "s array copied\n");
+
+    // declare global variables
+    cudaMemcpyToSymbol(d_N, &points.N, sizeof(int));
+    cudaMemcpyToSymbol(d_D, &points.D, sizeof(int));
+    cudaMemcpyToSymbol(d_r, &points.N, sizeof(int));
+
+    // init s array
+    const double istart = hpc_gettime();
+    ker_init<<<(points.N + BLOCKDIM - 1) / BLOCKDIM, BLOCKDIM>>>(d_s);
+    cudaDeviceSynchronize();
+    const double ielasped = hpc_gettime() - istart;
+    fprintf(stderr, "Init time: %f\n", ielasped);
+
     const double tstart = hpc_gettime();
-    const int r = skyline(&points, s);
+    ker_skyline<<<points.N, 1>>>(d_points, d_s);
+    // ker_skyline<<<1, 1>>>(d_points, d_s, d_local);
+    cudaMemcpy(s, d_s, size_s, cudaMemcpyDeviceToHost);
+
+    int r = 0;
+    for (int i = 0; i < points.N; i++)
+    {
+        r += s[i];
+    }
+
     const double elapsed = hpc_gettime() - tstart;
+    cudaMemcpyFromSymbol(&its, d_its, sizeof(int));
+
     print_skyline(&points, s, r);
 
     fprintf(stderr, "\n\t%d points\n", points.N);
     fprintf(stderr, "\t%d dimensions\n", points.D);
-    fprintf(stderr, "\t%d points in skyline\n\n", r);
+    fprintf(stderr, "\t%d points in skyline\n", r);
+    fprintf(stderr, "\t%d iterations\n\n", its);
     fprintf(stderr, "Execution time (s) %f\n", elapsed);
+
+    cudaFree(d_points);
+    cudaFree(d_s);
 
     free_points(&points);
     free(s);

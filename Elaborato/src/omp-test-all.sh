@@ -1,6 +1,6 @@
 #/bin/bash
 
-files=`ls ./datasets/*.in`
+files=`ls datasets/*.in`
 
 ot="omp-out"
 if [ ! -e $ot ] ; then
@@ -9,21 +9,31 @@ fi
 
 make omp
 
-rs="omp-result.txt"
-if [ -e $rs ] ; then
-    rm $rs
+OUTFILE="$ot/out.txt"
+if [ ! -e $OUTFILE ] ; then
+    touch $OUTFILE
 fi
-touch $rs
 
-i=0
+OUTDIR="nall"
+if [[ ! -e $OUTDIR ]] ; then
+    mkdir $OUTDIR
+fi
+
+rm $OUTDIR/*
+
+RES="$OUTDIR/res-all-ntimes.txt"
+
 for fin in $files ;
 do
-    ((i=$i + 1))
+    i=0
     echo $fin
-    ./omp-skyline < $fin > $ot/$ot$i.txt
-    echo $fin >> $rs
-    head "$ot/$ot$i.txt" -n 2 >> $rs
-    tail "$ot/$ot$i.txt" -n 1 >> $rs
-    echo "" >> $rs
-    echo ""
+    echo $fin >> $RES
+    echo -e "t1\tt2\tt3\tt4\tt5" >> $RES
+    for i in {1..5} ;
+    do
+        ./omp-skyline < $fin > $OUTFILE
+        echo `head $OUTFILE -n 2`
+        echo -n -e "`tail $OUTFILE -n 1`\t" >> $RES
+    done
+    echo -e "\n" >>$RES
 done
