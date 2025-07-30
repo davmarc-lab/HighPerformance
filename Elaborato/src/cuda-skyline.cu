@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <cstdio>
 #if _XOPEN_SOURCE < 600
+#include <__clang_cuda_builtin_vars.h>
 #define _XOPEN_SOURCE 600
 #endif
 
@@ -79,7 +80,7 @@ void free_points(points_t *points)
 }
 
 /* Returns 1 if |p| dominates |q| */
-__host__ __device__ int dominates(const float *p, const float *q, int D)
+__device__ int dominates(const float *p, const float *q, int D)
 {
     /* The following loops could be merged, but the keep them separated
        for the sake of readability */
@@ -98,44 +99,6 @@ __host__ __device__ int dominates(const float *p, const float *q, int D)
         }
     }
     return 0;
-}
-
-/**
- * Compute the skyline of `points`. At the end, `s[i] == 1` if point
- * `i` belongs to the skyline. The function returns the number `r` of
- * points that belongs to the skyline. The caller is responsible for
- * allocating the array `s` of length at least `points->N`.
- */
-int skyline(const points_t *points, int *s)
-{
-    const int D = points->D;
-    const int N = points->N;
-    const float *P = points->P;
-    int sum = 0;
-    int r = N;
-
-    for (int i = 0; i < N; i++)
-    {
-        s[i] = 1;
-    }
-
-    for (int i = 0; i < N; i++)
-    {
-        if (s[i])
-        {
-            for (int j = 0; j < N; j++)
-            {
-                if (s[j] && dominates(&(P[i * D]), &(P[j * D]), D))
-                {
-                    s[j] = 0;
-                    r--;
-                    sum++;
-                }
-            }
-        }
-    }
-    fprintf(stderr, "Its: %d\n", sum);
-    return r;
 }
 
 /**
@@ -165,59 +128,10 @@ void print_skyline(const points_t *points, const int *s, int r)
     }
 }
 
-__device__ int d_N;
-__device__ int d_D;
-__device__ int d_r;
+__constant__ int d_N;
+__constant__ int d_D;
+__constant__ int d_r;
 __device__ int d_its;
-
-__global__ void ker_skyline(float *p, int *s)
-{
-    // d_r = d_N;
-    __shared__ float point[SHARED_POINT_DIM];
-    if (d_D > SHARED_POINT_DIM)
-        return;
-
-    int index = blockIdx.x;
-    if (index > d_N)
-    {
-        return;
-    }
-
-    printf("%d\n", index);
-
-    for (int i = 0; i < d_D; i++)
-    {
-        point[i] = p[index * d_D + i];
-    }
-
-    if (s[index])
-    {
-        for (int i = 0; i < d_N; i++)
-        {
-            if (s[i] && dominates(point, &(p[i * d_D]), d_D))
-            {
-                s[i] = 0;
-                d_its++;
-            }
-        }
-    }
-
-    // for (int i = 0; i < d_N; i++)
-    // {
-    //     if (s[i])
-    //     {
-    //         for (int j = 0; j < d_N; j++)
-    //         {
-    //             if (s[j] && dominates(&(p[i * d_D]), &(p[j * d_D]), d_D))
-    //             {
-    //                 s[j] = 0;
-    //                 d_r--;
-    //                 d_its++;
-    //             }
-    //         }
-    //     }
-    // }
-}
 
 __global__ void ker_init(int *s)
 {
@@ -225,6 +139,89 @@ __global__ void ker_init(int *s)
     if (index < d_N)
     {
         s[index] = 1;
+    }
+}
+
+__device__ int d_i = 0;
+
+__global__ void ker_skyline(float *p, int *s)
+{
+    const int bindex = blockIdx.x;
+    const int tindex = threadIdx.x;
+    const int part_size = d_N < BLOCKDIM ? 1 : d_N / BLOCKDIM;
+    const bool needed = part_size * BLOCKDIM < d_N;
+
+    int tstart = tindex * part_size;
+    int tend = (tindex + 1) * part_size;
+
+    while (d_i < d_N)
+    {
+        if (s[d_i])
+        {
+            for (int j = tstart; j < tend; j++)
+            {
+                if (s[j] && d_i != j && dominates(&(p[d_i * d_D]), &(p[j * d_D]), d_D))
+                {
+                    s[j] = 0;
+                    d_its++;
+                }
+            }
+        }
+        if (needed && bindex == 0 && tindex == 0)
+        {
+            int start = BLOCKDIM * part_size;
+            for (int j = start; j < d_N; j++)
+            {
+                if (s[j] && d_i != j && dominates(&(p[d_i * d_D]), &(p[j * d_D]), d_D))
+                {
+                    s[j] = 0;
+                    d_its++;
+                }
+            }
+            d_i++;
+        }
+        __syncthreads();
+    }
+}
+
+__global__ void ker_skyline_all(float *p, int *s)
+{
+    const int bindex = blockIdx.x;
+    const int tindex = threadIdx.x;
+    const int pb = BLOCKDIM / d_D;
+
+    int elem = tindex + bindex * pb;
+    // int tend = (tindex + 1) * d_D + bindex * pb;
+    if (elem > pb * d_D)
+    {
+        printf("AAA\n");
+        return;
+    }
+
+    // if (tend == d_N)
+    // {
+    //     printf("Index %d %d\n", bindex, tindex);
+    // }
+
+    // printf("index: tstart => %d, tend => %d\n", tstart, tend);
+
+    while (d_i < d_N)
+    {
+        if (s[d_i])
+        {
+            if (s[elem] && d_i != elem && dominates(&(p[d_i * d_D]), &(p[elem * d_D]), d_D))
+            {
+                s[elem] = 0;
+                // atomicAdd(&d_its, 1);
+            }
+        }
+        __syncthreads();
+        if (bindex == 0 && tindex == 0)
+        {
+            // printf("Stop %d %d\n", bindex, tindex);
+            d_i++;
+        }
+        __syncthreads();
     }
 }
 
@@ -257,8 +254,6 @@ int main(int argc, char *argv[])
     // copy points to GPU memory
     cudaMemcpy(d_points, points.P, size_points, cudaMemcpyHostToDevice);
     fprintf(stderr, "Points copied\n");
-    cudaMemcpy(d_s, s, size_s, cudaMemcpyHostToDevice);
-    fprintf(stderr, "s array copied\n");
 
     // declare global variables
     cudaMemcpyToSymbol(d_N, &points.N, sizeof(int));
@@ -273,8 +268,13 @@ int main(int argc, char *argv[])
     fprintf(stderr, "Init time: %f\n", ielasped);
 
     const double tstart = hpc_gettime();
-    ker_skyline<<<points.N, 1>>>(d_points, d_s);
-    // ker_skyline<<<1, 1>>>(d_points, d_s, d_local);
+    // ker_skyline<<<points.N, 1>>>(d_points, d_s);
+    // ker_skyline<<<1, BLOCKDIM>>>(d_points, d_s);
+    float blocks = (float)(points.N * points.D) / BLOCKDIM;
+    const int iblocks = blocks - (int)blocks == 0 ? blocks : blocks + 1;
+    printf("Blocks num: %d\n", iblocks);
+    printf("Dim: %d\n", points.D);
+    ker_skyline_all<<<iblocks, BLOCKDIM>>>(d_points, d_s);
     cudaMemcpy(s, d_s, size_s, cudaMemcpyDeviceToHost);
 
     int r = 0;
@@ -286,7 +286,7 @@ int main(int argc, char *argv[])
     const double elapsed = hpc_gettime() - tstart;
     cudaMemcpyFromSymbol(&its, d_its, sizeof(int));
 
-    print_skyline(&points, s, r);
+    // print_skyline(&points, s, r);
 
     fprintf(stderr, "\n\t%d points\n", points.N);
     fprintf(stderr, "\t%d dimensions\n", points.D);

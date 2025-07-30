@@ -143,6 +143,7 @@ int skyline(const points_t *points, int *s)
     const int N = points->N;
     const float *P = points->P;
     int r = N;
+    int its = 0;
 
 #pragma omp parallel for
     for (int i = 0; i < N; i++)
@@ -154,7 +155,7 @@ int skyline(const points_t *points, int *s)
     {
         if (s[i])
         {
-#pragma omp parallel for default(shared) reduction(- : r)
+#pragma omp parallel for default(shared) reduction(- : r) reduction(+:its)
             for (int j = 0; j < N; j++)
             {
                 if (i != j && s[j] && dominates(&(P[i * D]), &(P[j * D]), D))
@@ -162,10 +163,13 @@ int skyline(const points_t *points, int *s)
                 {
                     s[j] = 0;
                     r--;
+                    its++;
                 }
             }
         }
     }
+
+    fprintf(stderr, "Its: %d\n", its);
 
     // #pragma omp parallel for reduction(+:r)
     // for (int i = 0; i < N; i++) {
@@ -221,10 +225,10 @@ int main(int argc, char *argv[])
     const double elapsed = hpc_gettime() - tstart;
     print_skyline(&points, s, r);
 
-    // fprintf(stderr, "\n\t%d points\n", points.N);
-    // fprintf(stderr, "\t%d dimensions\n", points.D);
-    // fprintf(stderr, "\t%d points in skyline\n\n", r);
-    // fprintf(stderr, "Execution time (s) %f\n", elapsed);
+    fprintf(stderr, "\n\t%d points\n", points.N);
+    fprintf(stderr, "\t%d dimensions\n", points.D);
+    fprintf(stderr, "\t%d points in skyline\n\n", r);
+    fprintf(stderr, "Execution time (s) %f\n", elapsed);
     printf("%f s\n", elapsed);
 
     free_points(&points);
