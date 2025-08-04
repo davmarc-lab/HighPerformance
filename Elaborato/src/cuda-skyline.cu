@@ -12,7 +12,6 @@
 #include "hpc.h"
 
 #define BLOCKDIM 1024
-#define SHARED_POINT_DIM 1024
 
 typedef struct
 {
@@ -129,9 +128,6 @@ void print_skyline(const points_t *points, const int *s, int r)
 }
 
 __constant__ int d_N;
-__constant__ int d_D;
-__constant__ int d_r;
-__device__ int d_its;
 
 __global__ void ker_init(int *s)
 {
@@ -142,86 +138,69 @@ __global__ void ker_init(int *s)
     }
 }
 
+/*
 __device__ int d_i = 0;
-
-__global__ void ker_skyline(float *p, int *s)
-{
-    const int bindex = blockIdx.x;
-    const int tindex = threadIdx.x;
-    const int part_size = d_N < BLOCKDIM ? 1 : d_N / BLOCKDIM;
-    const bool needed = part_size * BLOCKDIM < d_N;
-
-    int tstart = tindex * part_size;
-    int tend = (tindex + 1) * part_size;
-
-    while (d_i < d_N)
-    {
-        if (s[d_i])
-        {
-            for (int j = tstart; j < tend; j++)
-            {
-                if (s[j] && d_i != j && dominates(&(p[d_i * d_D]), &(p[j * d_D]), d_D))
-                {
-                    s[j] = 0;
-                    d_its++;
-                }
-            }
-        }
-        if (needed && bindex == 0 && tindex == 0)
-        {
-            int start = BLOCKDIM * part_size;
-            for (int j = start; j < d_N; j++)
-            {
-                if (s[j] && d_i != j && dominates(&(p[d_i * d_D]), &(p[j * d_D]), d_D))
-                {
-                    s[j] = 0;
-                    d_its++;
-                }
-            }
-            d_i++;
-        }
-        __syncthreads();
-    }
-}
 
 __global__ void ker_skyline_all(float *p, int *s)
 {
     const int bindex = blockIdx.x;
     const int tindex = threadIdx.x;
-    const int pb = BLOCKDIM / d_D;
 
-    int elem = tindex + bindex * pb;
-    // int tend = (tindex + 1) * d_D + bindex * pb;
-    if (elem > pb * d_D)
+    int elem = tindex + bindex * BLOCKDIM;
+
+    if (elem >= d_N)
     {
-        printf("AAA\n");
         return;
     }
-
-    // if (tend == d_N)
-    // {
-    //     printf("Index %d %d\n", bindex, tindex);
-    // }
-
-    // printf("index: tstart => %d, tend => %d\n", tstart, tend);
 
     while (d_i < d_N)
     {
         if (s[d_i])
         {
-            if (s[elem] && d_i != elem && dominates(&(p[d_i * d_D]), &(p[elem * d_D]), d_D))
+            if (dominates(&(p[d_i * d_D]), &(p[elem * d_D]), d_D))
             {
                 s[elem] = 0;
-                // atomicAdd(&d_its, 1);
+                atomicAdd(&d_its, 1);
             }
         }
         __syncthreads();
-        if (bindex == 0 && tindex == 0)
+        if (elem == 0)
         {
-            // printf("Stop %d %d\n", bindex, tindex);
             d_i++;
         }
         __syncthreads();
+    }
+
+    if (elem == 0)
+    {
+        printf("Its: %d\n", d_i);
+    }
+}
+*/
+
+__constant__ int d_D;
+__constant__ int d_r;
+__device__ int d_its;
+
+__global__ void ker_single_skyline(float *p, int *s, int i)
+{
+    const int bindex = blockIdx.x;
+    const int tindex = threadIdx.x;
+
+    int elem = tindex + bindex * BLOCKDIM;
+
+    if (elem >= d_N)
+    {
+        return;
+    }
+
+    if (s[i])
+    {
+        if (s[elem] && dominates(&(p[i * d_D]), &(p[elem * d_D]), d_D))
+        {
+            s[elem] = 0;
+            // atomicAdd(&d_its, 1);
+        }
     }
 }
 
@@ -263,18 +242,19 @@ int main(int argc, char *argv[])
     // init s array
     const double istart = hpc_gettime();
     ker_init<<<(points.N + BLOCKDIM - 1) / BLOCKDIM, BLOCKDIM>>>(d_s);
-    cudaDeviceSynchronize();
     const double ielasped = hpc_gettime() - istart;
     fprintf(stderr, "Init time: %f\n", ielasped);
 
     const double tstart = hpc_gettime();
-    // ker_skyline<<<points.N, 1>>>(d_points, d_s);
-    // ker_skyline<<<1, BLOCKDIM>>>(d_points, d_s);
-    float blocks = (float)(points.N * points.D) / BLOCKDIM;
-    const int iblocks = blocks - (int)blocks == 0 ? blocks : blocks + 1;
-    printf("Blocks num: %d\n", iblocks);
-    printf("Dim: %d\n", points.D);
-    ker_skyline_all<<<iblocks, BLOCKDIM>>>(d_points, d_s);
+    const int blocks = (points.N + BLOCKDIM - 1) / BLOCKDIM;
+    fprintf(stderr, "%d blocks\n", blocks);
+    // ker_skyline_all<<<blocks, BLOCKDIM>>>(d_points, d_s);
+
+    for (int i = 0; i < points.N; i++)
+    {
+        ker_single_skyline<<<blocks, BLOCKDIM>>>(d_points, d_s, i);
+    }
+
     cudaMemcpy(s, d_s, size_s, cudaMemcpyDeviceToHost);
 
     int r = 0;
