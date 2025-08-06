@@ -182,7 +182,7 @@ __constant__ int d_D;
 __constant__ int d_r;
 __device__ int d_its;
 
-__global__ void ker_single_skyline(float *p, int *s, int i)
+__global__ void ker_single_skyline(float *p, int *s)
 {
     const int bindex = blockIdx.x;
     const int tindex = threadIdx.x;
@@ -194,13 +194,16 @@ __global__ void ker_single_skyline(float *p, int *s, int i)
         return;
     }
 
-    if (s[i])
+    for (int i = 0; i < d_N; i++)
     {
-        if (s[elem] && dominates(&(p[i * d_D]), &(p[elem * d_D]), d_D))
+        if (s[i])
         {
-            s[elem] = 0;
-            // atomicAdd(&d_its, 1);
+            if (s[elem] && dominates(&(p[i * d_D]), &(p[elem * d_D]), d_D))
+            {
+                s[elem] = 0;
+            }
         }
+        __syncthreads();
     }
 }
 
@@ -250,10 +253,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "%d blocks\n", blocks);
     // ker_skyline_all<<<blocks, BLOCKDIM>>>(d_points, d_s);
 
-    for (int i = 0; i < points.N; i++)
-    {
-        ker_single_skyline<<<blocks, BLOCKDIM>>>(d_points, d_s, i);
-    }
+    ker_single_skyline<<<blocks, BLOCKDIM>>>(d_points, d_s);
 
     cudaMemcpy(s, d_s, size_s, cudaMemcpyDeviceToHost);
 
@@ -273,6 +273,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "\t%d points in skyline\n", r);
     fprintf(stderr, "\t%d iterations\n\n", its);
     fprintf(stderr, "Execution time (s) %f\n", elapsed);
+    printf("%f", elapsed);
 
     cudaFree(d_points);
     cudaFree(d_s);
