@@ -3,6 +3,7 @@
 dataset*
 *.in
 omp-out*
+cuda-out*
 out*
 omp-*.txt
 sse*
