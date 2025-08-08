@@ -138,46 +138,6 @@ __global__ void ker_init(int *s)
     }
 }
 
-/*
-__device__ int d_i = 0;
-
-__global__ void ker_skyline_all(float *p, int *s)
-{
-    const int bindex = blockIdx.x;
-    const int tindex = threadIdx.x;
-
-    int elem = tindex + bindex * BLOCKDIM;
-
-    if (elem >= d_N)
-    {
-        return;
-    }
-
-    while (d_i < d_N)
-    {
-        if (s[d_i])
-        {
-            if (dominates(&(p[d_i * d_D]), &(p[elem * d_D]), d_D))
-            {
-                s[elem] = 0;
-                atomicAdd(&d_its, 1);
-            }
-        }
-        __syncthreads();
-        if (elem == 0)
-        {
-            d_i++;
-        }
-        __syncthreads();
-    }
-
-    if (elem == 0)
-    {
-        printf("Its: %d\n", d_i);
-    }
-}
-*/
-
 __constant__ int d_D;
 __constant__ int d_r;
 __device__ int d_its;
@@ -201,6 +161,7 @@ __global__ void ker_single_skyline(float *p, int *s)
             if (s[elem] && dominates(&(p[i * d_D]), &(p[elem * d_D]), d_D))
             {
                 s[elem] = 0;
+                atomicAdd(&d_its, 1);
             }
         }
         __syncthreads();
@@ -226,34 +187,49 @@ int main(int argc, char *argv[])
     assert(s);
 
     const size_t size_points = points.D * points.N * sizeof(float);
-    cudaMalloc((void **)&d_points, size_points);
-    fprintf(stderr, "Points memory allocated: %zu\n", size_points);
-
     const size_t size_s = points.N * sizeof(int);
+
+    fprintf(stderr, "Allocating GPU memory\n");
+    const double astart = hpc_gettime();
+
+    cudaMalloc((void **)&d_points, size_points);
+    fprintf(stderr, "\t'points' memory allocated: %zu\n", size_points);
+
     cudaMalloc((void **)&d_s, size_s);
-    fprintf(stderr, "s array memory allocated: %zu\n", size_s);
+    fprintf(stderr, "\t's' array memory allocated: %zu\n", size_s);
+    const double aelapsed = hpc_gettime() - astart;
+    fprintf(stderr, "\tMalloc time: %lf s\n\n", aelapsed);
 
     // copy points to GPU memory
+    fprintf(stderr, "Copying data\n");
+    const double cstart = hpc_gettime();
+
     cudaMemcpy(d_points, points.P, size_points, cudaMemcpyHostToDevice);
-    fprintf(stderr, "Points copied\n");
+    fprintf(stderr, "\t'points' copied\n");
 
     // declare global variables
     cudaMemcpyToSymbol(d_N, &points.N, sizeof(int));
     cudaMemcpyToSymbol(d_D, &points.D, sizeof(int));
     cudaMemcpyToSymbol(d_r, &points.N, sizeof(int));
+    const double celapsed = hpc_gettime() - cstart;
+    fprintf(stderr, "\tCopy time: %lf s\n\n", celapsed);
 
     // init s array
     const double istart = hpc_gettime();
     ker_init<<<(points.N + BLOCKDIM - 1) / BLOCKDIM, BLOCKDIM>>>(d_s);
     const double ielasped = hpc_gettime() - istart;
-    fprintf(stderr, "Init time: %f\n", ielasped);
+    fprintf(stderr, "'s' init time: %lf s\n\n", ielasped);
+
+    const int blocks = (points.N + BLOCKDIM - 1) / BLOCKDIM;
+    fprintf(stderr, "%d blocks, %d thread per block\n", blocks, BLOCKDIM);
+
+    fprintf(stderr, "\nStart skyline:\n");
 
     const double tstart = hpc_gettime();
-    const int blocks = (points.N + BLOCKDIM - 1) / BLOCKDIM;
-    fprintf(stderr, "%d blocks\n", blocks);
-    // ker_skyline_all<<<blocks, BLOCKDIM>>>(d_points, d_s);
-
     ker_single_skyline<<<blocks, BLOCKDIM>>>(d_points, d_s);
+    cudaDeviceSynchronize();
+    fprintf(stderr, "-- GPU call finished t => %lf s\n", hpc_gettime() - tstart);
+    fprintf(stderr, "-- cpoying s and start final reduction iteration\n");
 
     cudaMemcpy(s, d_s, size_s, cudaMemcpyDeviceToHost);
 
