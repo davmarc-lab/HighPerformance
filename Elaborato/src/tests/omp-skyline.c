@@ -169,7 +169,6 @@ int skyline(const points_t *points, int *s)
             }
         }
     }
-
     fprintf(stderr, "Its: %d\n", its);
 
     return r;
@@ -218,12 +217,13 @@ int main(int argc, char *argv[])
     const double tstart = hpc_gettime();
     const int r = skyline(&points, s);
     const double elapsed = hpc_gettime() - tstart;
-    print_skyline(&points, s, r);
+    // print_skyline(&points, s, r);
 
     fprintf(stderr, "\n\t%d points\n", points.N);
     fprintf(stderr, "\t%d dimensions\n", points.D);
     fprintf(stderr, "\t%d points in skyline\n\n", r);
     fprintf(stderr, "Execution time (s) %f\n", elapsed);
+    printf("%f s\n", elapsed);
 
     free_points(&points);
     free(s);
