@@ -226,12 +226,13 @@ int main(int argc, char *argv[])
 
     const double tstart = hpc_gettime();
     ker_single_skyline<<<blocks, BLOCKDIM>>>(d_points, d_s);
-    const double elapsed = hpc_gettime() - tstart;
 
     int r = 0;
     cudaMemcpyFromSymbol(&r, d_r, sizeof(int));
     its = r;
     r = points.N - r;
+
+    const double elapsed = hpc_gettime() - tstart;
 
     fprintf(stderr, "\n\t%d points\n", points.N);
     fprintf(stderr, "\t%d dimensions\n", points.D);
