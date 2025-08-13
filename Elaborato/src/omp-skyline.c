@@ -145,7 +145,7 @@ int skyline(const points_t *points, int *s)
     int r = N;
     int its = 0;
 
-    int t_num = N <= 1024 ? 1 : omp_get_max_threads();
+    int t_num = N <= 1024 && D <= 4 ? 1 : omp_get_max_threads();
 
 #pragma omp parallel for num_threads(t_num)
     for (int i = 0; i < N; i++)
@@ -157,7 +157,7 @@ int skyline(const points_t *points, int *s)
     {
         if (s[i])
         {
-#pragma omp parallel for num_threads(t_num) default(shared) reduction(- : r) reduction(+ : its)
+#pragma omp parallel for num_threads(t_num) reduction(- : r) reduction(+ : its)
             for (int j = 0; j < N; j++)
             {
                 if (s[j] && i != j && dominates(&(P[i * D]), &(P[j * D]), D))
@@ -169,7 +169,6 @@ int skyline(const points_t *points, int *s)
             }
         }
     }
-
     fprintf(stderr, "Its: %d\n", its);
 
     return r;
@@ -218,12 +217,13 @@ int main(int argc, char *argv[])
     const double tstart = hpc_gettime();
     const int r = skyline(&points, s);
     const double elapsed = hpc_gettime() - tstart;
-    print_skyline(&points, s, r);
+    // print_skyline(&points, s, r);
 
     fprintf(stderr, "\n\t%d points\n", points.N);
     fprintf(stderr, "\t%d dimensions\n", points.D);
     fprintf(stderr, "\t%d points in skyline\n\n", r);
     fprintf(stderr, "Execution time (s) %f\n", elapsed);
+    printf("%f s\n", elapsed);
 
     free_points(&points);
     free(s);
