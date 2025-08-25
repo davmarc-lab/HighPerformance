@@ -9,6 +9,7 @@ omp-*.txt
 sse*
 wse*
 nall*
+weak
 
 *.o
 *.exe

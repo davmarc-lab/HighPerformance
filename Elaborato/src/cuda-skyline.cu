@@ -139,21 +139,22 @@ __global__ void ker_init(int *s)
 }
 
 __constant__ int d_D;
-__device__ int d_r = 0;
+__device__ int d_r;
 __device__ int d_its = 0;
 
-__global__ void ker_single_skyline(float *p, int *s)
+__global__ void ker_skyline(float *p, int *s)
 {
-    __shared__ int local_r;
+    __shared__ int local_its;
 
     const int bindex = blockIdx.x;
     const int tindex = threadIdx.x;
 
-    int t_r = 0;
+    int t_its = 0;
+
+    // one thread initialize the block result
     if (tindex == 0)
     {
-        // initialize the block result
-        local_r = 0;
+        local_its = 0;
     }
 
     // current point of each thread
@@ -166,24 +167,22 @@ __global__ void ker_single_skyline(float *p, int *s)
 
     for (int i = 0; i < d_N; i++)
     {
-        if (s[i])
+        if (s[i] && s[elem] && dominates(&(p[i * d_D]), &(p[elem * d_D]), d_D))
         {
-            if (s[elem] && i != elem && dominates(&(p[i * d_D]), &(p[elem * d_D]), d_D))
-            {
-                s[elem] = 0;
-                t_r += 1;
-            }
+            s[elem] = 0;
+            t_its += 1;
+            atomicAdd(&d_r, -1);
         }
     }
 
     // each thread sums his result
-    atomicAdd(&local_r, t_r);
+    atomicAdd(&local_its, t_its);
     __syncthreads();
 
     // the first thread of each block sums his value in the final variable
     if (tindex == 0)
     {
-        atomicAdd(&d_r, local_r);
+        atomicAdd(&d_its, local_its);
     }
 }
 
@@ -229,33 +228,22 @@ int main(int argc, char *argv[])
     // declare global variables
     cudaMemcpyToSymbol(d_N, &points.N, sizeof(int));
     cudaMemcpyToSymbol(d_D, &points.D, sizeof(int));
+    cudaMemcpyToSymbol(d_r, &points.N, sizeof(int));
     const double celapsed = hpc_gettime() - cstart;
     // fprintf(stderr, "\tCopy time: %lf s\n\n", celapsed);
 
-    // init s array
-    const double istart = hpc_gettime();
-    ker_init<<<(points.N + BLOCKDIM - 1) / BLOCKDIM, BLOCKDIM>>>(d_s);
-    const double ielasped = hpc_gettime() - istart;
-    // fprintf(stderr, "'s' init time: %lf s\n\n", ielasped);
-
+    int r;
     const int blocks = (points.N + BLOCKDIM - 1) / BLOCKDIM;
-    // fprintf(stderr, "%d blocks, %d thread per block\n", blocks, BLOCKDIM);
-
-    // fprintf(stderr, "\nStart skyline:\n");
-
     const double tstart = hpc_gettime();
-    ker_single_skyline<<<blocks, BLOCKDIM>>>(d_points, d_s);
-    // cudaDeviceSynchronize();
-    // fprintf(stderr, "-- kernel finished t => %lf s\n", hpc_gettime() - tstart);
-
-    int r = 0;
+    // init s array
+    ker_init<<<blocks, BLOCKDIM>>>(d_s);
+    // exec skyline
+    ker_skyline<<<blocks, BLOCKDIM>>>(d_points, d_s);
+    // copy results
+    cudaMemcpyFromSymbol(&its, d_its, sizeof(int));
     cudaMemcpyFromSymbol(&r, d_r, sizeof(int));
-    its = r;
-    r = points.N - r;
 
     const double elapsed = hpc_gettime() - tstart;
-    // cudaMemcpyFromSymbol(&its, d_its, sizeof(int));
-
     // print_skyline(&points, s, r);
 
     fprintf(stderr, "\n\t%d points\n", points.N);
