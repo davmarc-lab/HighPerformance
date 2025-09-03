@@ -167,16 +167,14 @@ __global__ void ker_skyline(float *p, int *s)
 
     for (int i = 0; i < d_N; i++)
     {
-        if (s[i] && s[elem] && dominates(&(p[i * d_D]), &(p[elem * d_D]), d_D))
+        if (s[i] && dominates(&(p[i * d_D]), &(p[elem * d_D]), d_D))
         {
             s[elem] = 0;
-            t_its += 1;
-            atomicAdd(&d_r, -1);
+            atomicAdd(&local_its, 1);
+            break;
         }
     }
 
-    // each thread sums his result
-    atomicAdd(&local_its, t_its);
     __syncthreads();
 
     // the first thread of each block sums his value in the final variable
@@ -232,7 +230,6 @@ int main(int argc, char *argv[])
     const double celapsed = hpc_gettime() - cstart;
     // fprintf(stderr, "\tCopy time: %lf s\n\n", celapsed);
 
-    int r;
     const int blocks = (points.N + BLOCKDIM - 1) / BLOCKDIM;
     const double tstart = hpc_gettime();
     // init s array
@@ -241,14 +238,13 @@ int main(int argc, char *argv[])
     ker_skyline<<<blocks, BLOCKDIM>>>(d_points, d_s);
     // copy results
     cudaMemcpyFromSymbol(&its, d_its, sizeof(int));
-    cudaMemcpyFromSymbol(&r, d_r, sizeof(int));
 
     const double elapsed = hpc_gettime() - tstart;
     // print_skyline(&points, s, r);
 
     fprintf(stderr, "\n\t%d points\n", points.N);
     fprintf(stderr, "\t%d dimensions\n", points.D);
-    fprintf(stderr, "\t%d points in skyline\n", r);
+    fprintf(stderr, "\t%d points in skyline\n", points.N - its);
     fprintf(stderr, "\t%d iterations\n\n", its);
     fprintf(stderr, "Execution time (s) %f\n", elapsed);
     printf("%f", elapsed);
