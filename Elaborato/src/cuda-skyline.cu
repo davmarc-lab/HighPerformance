@@ -149,8 +149,6 @@ __global__ void ker_skyline(float *p, int *s)
     const int bindex = blockIdx.x;
     const int tindex = threadIdx.x;
 
-    int t_its = 0;
-
     // one thread initialize the block result
     if (tindex == 0)
     {
@@ -170,6 +168,9 @@ __global__ void ker_skyline(float *p, int *s)
         if (s[i] && dominates(&(p[i * d_D]), &(p[elem * d_D]), d_D))
         {
             s[elem] = 0;
+            // remove this operation by using shared memory to store shared_its[tindex] = 1
+            // at the end of all operation the master threads sums all the elements in a variable
+            // and then executes atomic operation on d_its
             atomicAdd(&local_its, 1);
             break;
         }
