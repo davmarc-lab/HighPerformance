@@ -154,10 +154,9 @@ int skyline(const points_t *points, int *s)
         s[i] = 1;
     }
 
-#pragma omp parallel for num_threads(t_num) reduction(- : r) reduction(+ : its)
+#pragma omp parallel for num_threads(t_num) firstprivate(s) reduction(- : r) reduction(+ : its)
     for (int i = 0; i < N; i++)
     {
-#pragma omp parallel for num_threads(t_num)
         for (int j = 0; j < N; j++)
         {
             if (s[i] && s[j] && i != j && dominates(&(P[j * D]), &(P[i * D]), D))
