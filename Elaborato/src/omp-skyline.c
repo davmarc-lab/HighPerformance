@@ -148,13 +148,14 @@ int skyline(const points_t *points, int *s)
     int t_num = N <= 1024 && D <= 4 ? 1 : omp_get_max_threads();
     // int t_num = omp_get_max_threads();
 
-#pragma omp parallel for num_threads(t_num)
+#pragma omp parallel for num_threads(t_num) default(shared)
     for (int i = 0; i < N; i++)
     {
         s[i] = 1;
     }
 
-#pragma omp parallel for num_threads(t_num) firstprivate(s) reduction(- : r) reduction(+ : its)
+#pragma omp parallel for num_threads(t_num) default(shared) firstprivate(s) \
+    reduction(- : r) reduction(+ : its)
     for (int i = 0; i < N; i++)
     {
         for (int j = 0; j < N; j++)
