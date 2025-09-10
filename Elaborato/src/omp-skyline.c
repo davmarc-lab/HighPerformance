@@ -109,7 +109,7 @@ void free_points(points_t *points)
     points->N = points->D = -1;
 }
 
-/* Returns 1 iff |p| dominates |q| */
+/* Returns 1 if |p| dominates |q| */
 int dominates(const float *p, const float *q, int D)
 {
     /* The following loops could be merged, but the keep them separated
@@ -154,8 +154,8 @@ int skyline(const points_t *points, int *s)
         s[i] = 1;
     }
 
-#pragma omp parallel for num_threads(t_num) default(shared) firstprivate(s) \
-    reduction(- : r) reduction(+ : its)
+#pragma omp parallel for num_threads(t_num) default(shared) firstprivate(s) reduction(- : r)       \
+    reduction(+ : its)
     for (int i = 0; i < N; i++)
     {
         for (int j = 0; j < N; j++)
@@ -176,7 +176,7 @@ int skyline(const points_t *points, int *s)
 
 /**
  * Print the coordinates of points belonging to the skyline `s` to
- * standard ouptut. `s[i] == 1` iff point `i` belongs to the skyline.
+ * standard ouptut. `s[i] == 1` if point `i` belongs to the skyline.
  * The output format is the same as the input format, so that this
  * program can process its own output.
  */
@@ -217,13 +217,12 @@ int main(int argc, char *argv[])
     const double tstart = hpc_gettime();
     const int r = skyline(&points, s);
     const double elapsed = hpc_gettime() - tstart;
-    // print_skyline(&points, s, r);
+    print_skyline(&points, s, r);
 
     fprintf(stderr, "\n\t%d points\n", points.N);
     fprintf(stderr, "\t%d dimensions\n", points.D);
     fprintf(stderr, "\t%d points in skyline\n\n", r);
     fprintf(stderr, "Execution time (s) %f\n", elapsed);
-    printf("%f\n", elapsed);
 
     free_points(&points);
     free(s);
