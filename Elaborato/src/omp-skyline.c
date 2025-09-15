@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * skyline.c - Serial implementaiton of the skyline operator
+ * omp-skyline.c - OpenMP implementaiton of the skyline operator
  *
  * Copyright (C) 2024 Moreno Marzolla
  *
@@ -25,11 +25,11 @@
  *
  * Per compilare:
  *
- *      gcc -std=c99 -Wall -Wpedantic -O2 skyline.c -o skyline
+ *      gcc -std=c99 -Wall -Wpedantic -O2 -D_OPEN_SOURCE=600 omp-skyline.c -lm -o omp-skyline
  *
  * Per eseguire il programma:
  *
- *      ./skyline < input > output
+ *      ./omp-skyline < input > output
  *
  ****************************************************************************/
 
@@ -145,17 +145,13 @@ int skyline(const points_t *points, int *s)
     int r = N;
     int its = 0;
 
-    int t_num = N <= 1024 && D <= 4 ? 1 : omp_get_max_threads();
-    // int t_num = omp_get_max_threads();
-
-#pragma omp parallel for num_threads(t_num) default(shared)
+#pragma omp parallel for default(shared)
     for (int i = 0; i < N; i++)
     {
         s[i] = 1;
     }
 
-#pragma omp parallel for num_threads(t_num) default(shared) firstprivate(s) reduction(- : r)       \
-    reduction(+ : its)
+#pragma omp parallel for default(shared) firstprivate(s) reduction(- : r) reduction(+ : its)
     for (int i = 0; i < N; i++)
     {
         for (int j = 0; j < N; j++)
@@ -169,7 +165,9 @@ int skyline(const points_t *points, int *s)
             }
         }
     }
+
     fprintf(stderr, "Its: %d\n", its);
+
 
     return r;
 }

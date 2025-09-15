@@ -1,7 +1,41 @@
+/****************************************************************************
+ *
+ * cuda-skyline.c - OpenMP implementaiton of the skyline operator
+ *
+ * Copyright (C) 2024 Moreno Marzolla
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --------------------------------------------------------------------------
+ *
+ * Questo programma calcola lo skyline di un insieme di punti in D
+ * dimensioni letti da standard input. Per una descrizione completa
+ * si veda la specifica del progetto sulla piattaforma "Virtuale".
+ *
+ * Per compilare:
+ *
+ *      nvcc -Wno-deprecated-gpu-targets cuda-skyline.cu -o cuda-skyline -lm
+ *
+ * Per eseguire il programma:
+ *
+ *      ./cuda-skyline < input > output
+ *
+ ****************************************************************************/
+
 #include <cstddef>
 #include <cstdio>
 #if _XOPEN_SOURCE < 600
-#include <__clang_cuda_builtin_vars.h>
 #define _XOPEN_SOURCE 600
 #endif
 
@@ -144,18 +178,14 @@ __device__ int d_its = 0;
 
 __global__ void ker_skyline(float *p, int *s)
 {
-    __shared__ int local_its;
+    __shared__ int s_its[BLOCKDIM];
 
     const int bindex = blockIdx.x;
     const int tindex = threadIdx.x;
 
-    // one thread initialize the block result
-    if (tindex == 0)
-    {
-        local_its = 0;
-    }
+    s_its[tindex] = 0;
 
-    // current point of each thread
+    /* current point of each thread */
     int elem = tindex + bindex * BLOCKDIM;
 
     if (elem >= d_N)
@@ -163,24 +193,24 @@ __global__ void ker_skyline(float *p, int *s)
         return;
     }
 
-    for (int i = 0; i < d_N; i++)
+    for (int i = 0; i < d_N && s[elem]; i++)
     {
-        if (s[i] && dominates(&(p[i * d_D]), &(p[elem * d_D]), d_D))
+        if (dominates(&(p[i * d_D]), &(p[elem * d_D]), d_D))
         {
             s[elem] = 0;
-            // remove this operation by using shared memory to store shared_its[tindex] = 1
-            // at the end of all operation the master threads sums all the elements in a variable
-            // and then executes atomic operation on d_its
-            atomicAdd(&local_its, 1);
-            break;
+            s_its[tindex] = 1;
         }
     }
 
     __syncthreads();
 
-    // the first thread of each block sums his value in the final variable
+    /* the first thread of each block sums his value in the final variable */
     if (tindex == 0)
     {
+        int local_its = 0;
+        for (int i = 0; i < BLOCKDIM; i++) {
+            local_its += s_its[i];
+        }
         atomicAdd(&d_its, local_its);
     }
 }
@@ -203,52 +233,47 @@ int main(int argc, char *argv[])
     int *s = (int *)malloc(points.N * sizeof(*s));
     assert(s);
 
+    /* points array size */
     const size_t size_points = points.D * points.N * sizeof(float);
+    /* s array size */
     const size_t size_s = points.N * sizeof(int);
 
-    // fprintf(stderr, "\nAllocating GPU memory\n");
-    const double astart = hpc_gettime();
-
+    /* allocate gpu memory */
     cudaMalloc((void **)&d_points, size_points);
-    // fprintf(stderr, "\t'points' memory allocated: %zu\n", size_points);
-
     cudaMalloc((void **)&d_s, size_s);
-    // fprintf(stderr, "\t's' array memory allocated: %zu\n", size_s);
-    const double aelapsed = hpc_gettime() - astart;
-    // fprintf(stderr, "\tMalloc time: %lf s\n\n", aelapsed);
 
-    // copy points to GPU memory
-    // fprintf(stderr, "Copying data\n");
-    const double cstart = hpc_gettime();
-
+    /* copy points to GPU memory */
     cudaMemcpy(d_points, points.P, size_points, cudaMemcpyHostToDevice);
-    // fprintf(stderr, "\t'points' copied\n");
 
-    // declare global variables
+    /* declare global variables */
     cudaMemcpyToSymbol(d_N, &points.N, sizeof(int));
     cudaMemcpyToSymbol(d_D, &points.D, sizeof(int));
     cudaMemcpyToSymbol(d_r, &points.N, sizeof(int));
-    const double celapsed = hpc_gettime() - cstart;
-    // fprintf(stderr, "\tCopy time: %lf s\n\n", celapsed);
 
+    /* calculate the number of blocks */
     const int blocks = (points.N + BLOCKDIM - 1) / BLOCKDIM;
-    const double tstart = hpc_gettime();
-    // init s array
-    ker_init<<<blocks, BLOCKDIM>>>(d_s);
-    // exec skyline
-    ker_skyline<<<blocks, BLOCKDIM>>>(d_points, d_s);
-    // copy results
-    cudaMemcpyFromSymbol(&its, d_its, sizeof(int));
 
+    const double tstart = hpc_gettime();
+    /* init s array */
+    ker_init<<<blocks, BLOCKDIM>>>(d_s);
+
+    /* exec skyline */
+    ker_skyline<<<blocks, BLOCKDIM>>>(d_points, d_s);
+
+    /* copy results */
+    cudaMemcpyFromSymbol(&its, d_its, sizeof(int));
+    cudaMemcpy(s, d_s, size_s, cudaMemcpyDeviceToHost);
     const double elapsed = hpc_gettime() - tstart;
-    // print_skyline(&points, s, r);
+
+    fprintf(stderr, "Its: %d\n", its);
+
+    int r = points.N - its;
+    print_skyline(&points, s, r);
 
     fprintf(stderr, "\n\t%d points\n", points.N);
     fprintf(stderr, "\t%d dimensions\n", points.D);
-    fprintf(stderr, "\t%d points in skyline\n", points.N - its);
-    fprintf(stderr, "\t%d iterations\n\n", its);
+    fprintf(stderr, "\t%d points in skyline\n", r);
     fprintf(stderr, "Execution time (s) %f\n", elapsed);
-    printf("%f", elapsed);
 
     cudaFree(d_points);
     cudaFree(d_s);
