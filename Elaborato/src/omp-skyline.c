@@ -1,3 +1,7 @@
+/*
+ * Marchetti Davide 0001021628
+ */
+
 /****************************************************************************
  *
  * omp-skyline.c - OpenMP implementaiton of the skyline operator
@@ -167,7 +171,6 @@ int skyline(const points_t *points, int *s)
     }
 
     fprintf(stderr, "Its: %d\n", its);
-
 
     return r;
 }

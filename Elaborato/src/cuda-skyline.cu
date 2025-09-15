@@ -1,3 +1,7 @@
+/*
+ * Marchetti Davide 0001021628
+ */
+
 /****************************************************************************
  *
  * cuda-skyline.c - OpenMP implementaiton of the skyline operator
@@ -208,7 +212,8 @@ __global__ void ker_skyline(float *p, int *s)
     if (tindex == 0)
     {
         int local_its = 0;
-        for (int i = 0; i < BLOCKDIM; i++) {
+        for (int i = 0; i < BLOCKDIM; i++)
+        {
             local_its += s_its[i];
         }
         atomicAdd(&d_its, local_its);
